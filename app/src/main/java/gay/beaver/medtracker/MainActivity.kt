@@ -5,17 +5,23 @@ import android.os.Parcelable
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.core.EaseInOut
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -96,7 +102,14 @@ fun MedList(
             )
         }
 
-        FloatingActionButton() { }
+        // Item is needed because it's a lazy list??? idk
+        item {
+            FloatingActionButton(
+                onClick = { 1 }
+            ) {
+                Icon(Icons.Rounded.Add, contentDescription = "Add medication")
+            }
+        }
     }
 }
 
@@ -108,16 +121,28 @@ fun MedInfo(
     collapsed: Boolean,
     onCollapsedChange: (Boolean) -> Unit
 ) {
+    val height by animateDpAsState(
+        if (collapsed) 120.dp else 200.dp,
+        label = "Card Height",
+        animationSpec = tween(
+            durationMillis = 300,
+            //            delayMillis = 50,
+            easing = EaseInOut
+        )
+    )
     Card(
         elevation = CardDefaults.cardElevation(
             defaultElevation = 6.dp
-        ), modifier = if (collapsed) modifier.size(width = 360.dp, height = 150.dp)
-        else modifier.size(width = 360.dp, height = 100.dp),
+        ),
+        modifier = Modifier.height(height),
 
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-        )
-    ) {
+        ),
+        onClick = { onCollapsedChange(!collapsed) },
+
+        ) {
+
 
         Column(modifier = Modifier.fillMaxSize()) {
             Text(
@@ -131,15 +156,6 @@ fun MedInfo(
 
             // TODO: Make the values clickable/tappable so you can change them. Underline the values (possibly)
             Text(
-                text = "Dose: ${med.dosage}${med.dosageUnit}",
-                modifier = Modifier
-                    .padding(20.dp, 5.dp)
-                    .fillMaxWidth(),
-                style = MaterialTheme.typography.titleMedium,
-                textAlign = TextAlign.Left,
-            )
-
-            Text(
                 text = "Supply left: ${med.supply.current} (started with ${med.supply.start})",
                 modifier = Modifier
                     .padding(20.dp, 5.dp)
@@ -147,6 +163,17 @@ fun MedInfo(
                 style = MaterialTheme.typography.titleMedium,
                 textAlign = TextAlign.Left,
             )
+
+            if (!collapsed) {
+                Text(
+                    text = "Dose: ${med.dosage}${med.dosageUnit}",
+                    modifier = Modifier
+                        .padding(20.dp, 5.dp)
+                        .fillMaxWidth(),
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Left,
+                )
+            }
         }
     }
 }
