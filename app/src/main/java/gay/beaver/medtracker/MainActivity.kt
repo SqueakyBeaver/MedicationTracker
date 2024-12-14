@@ -1,7 +1,6 @@
 package gay.beaver.medtracker
 
 import android.os.Bundle
-import android.os.Parcelable
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -34,29 +33,32 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import gay.beaver.medtracker.ui.theme.MedTrackerTheme
-import kotlinx.parcelize.Parcelize
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            var medications: List<Medication> by remember {
-                mutableStateOf(
-                    listOf(
-                        Medication("Prozac", 30, "mg", MedSupply(30, 30)),
-                        Medication("Vyvanse", 30, "mg", MedSupply(30, 30)),
-                        Medication("Gay", 30, "mg", MedSupply(30, 30))
-                    )
+            val viewModel: MedViewModel = viewModel()
+
+            viewModel.addMeds(
+                listOf(
+                    Medication("Prozac", 30, "mg", MedSupply(30, 30)),
+                    Medication("Vyvanse", 30, "mg", MedSupply(30, 30)),
+                    Medication("Gay", 30, "mg", MedSupply(30, 30))
                 )
-            }
+            )
+
+            var medications = viewModel.getAllMeds()
+
             MedTrackerTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Column(modifier = Modifier.padding(innerPadding)) {
                         MedList(
                             medications,
-                            { medications = it }
+                            { viewModel.updateMeds(it) }
                         )
                     }
                 }
@@ -64,19 +66,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
-// TODO: State
-@Parcelize
-data class MedSupply(val start: Int, val current: Int) : Parcelable
-
-// TODO: Add dosage subclass that says how much, what it looks like, how many to take, and stuff like daily
-@Parcelize
-data class Medication(
-    val name: String,
-    val dosage: Int,
-    val dosageUnit: String, // Drop down select
-    val supply: MedSupply, /*val time: Date*/
-) : Parcelable
 
 
 // TODO: Move into separate file
@@ -105,7 +94,7 @@ fun MedList(
         // Item is needed because it's a lazy list??? idk
         item {
             FloatingActionButton(
-                onClick = { 1 }
+                onClick = { }
             ) {
                 Icon(Icons.Rounded.Add, contentDescription = "Add medication")
             }
@@ -121,12 +110,19 @@ fun MedInfo(
     collapsed: Boolean,
     onCollapsedChange: (Boolean) -> Unit
 ) {
+    val viewModel: MedViewModel = viewModel()
+    var thisMed = viewModel.getMed(med)
+
+    if (thisMed == null) {
+        viewModel.addMed(med)
+        thisMed = viewModel.getMed(med)!!
+    }
+
     val height by animateDpAsState(
         if (collapsed) 120.dp else 200.dp,
         label = "Card Height",
         animationSpec = tween(
             durationMillis = 300,
-            //            delayMillis = 50,
             easing = EaseInOut
         )
     )
@@ -142,21 +138,12 @@ fun MedInfo(
         onClick = { onCollapsedChange(!collapsed) },
 
         ) {
-
-
         Column(modifier = Modifier.fillMaxSize()) {
-            Text(
-                text = med.name,
-                modifier = Modifier
-                    .padding(20.dp, 10.dp, 20.dp, 30.dp)
-                    .fillMaxWidth(),
-                style = MaterialTheme.typography.titleLarge,
-                textAlign = TextAlign.Center
-            )
+            thisMed.DisplayName(modifier = modifier)
 
             // TODO: Make the values clickable/tappable so you can change them. Underline the values (possibly)
             Text(
-                text = "Supply left: ${med.supply.current} (started with ${med.supply.start})",
+                text = "Supply left: ${thisMed.supply.current} (started with ${thisMed.supply.start})",
                 modifier = Modifier
                     .padding(20.dp, 5.dp)
                     .fillMaxWidth(),
@@ -166,7 +153,7 @@ fun MedInfo(
 
             if (!collapsed) {
                 Text(
-                    text = "Dose: ${med.dosage}${med.dosageUnit}",
+                    text = "Dose: ${thisMed.dosage}${thisMed.dosageUnit}",
                     modifier = Modifier
                         .padding(20.dp, 5.dp)
                         .fillMaxWidth(),
